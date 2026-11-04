@@ -35,7 +35,11 @@ Keep this for every model. Use 32k for Opus and Sonnet; a deliverable of up to 2
   ```
 
   Without prompt caching, a 1-hour research job on Opus reads several million input tokens, because the context is re-read on every step. Kinship used 15M input and 600k output as a safety cap at a $25 price. Check the real spend of the test hire on cloud.near.ai, then adjust the price or the caps.
-- NEAR AI's `usage` reports no cached tokens (checked 2026-11-04: two identical 20k-token Opus requests both counted the full 20k as `prompt_tokens`). Size the caps assuming every step pays for its full context.
+- **Prompt caching works only when the request asks for it.** Checked on Opus 5.5 on 2026-11-04 with a 20k-token system prompt sent twice:
+  - as a plain string: both requests counted the full 20k as `prompt_tokens`, and `usage` had no cache fields;
+  - as a content part with `"cache_control": {"type": "ephemeral"}`: the first reported `prompt_tokens_details.cache_creation_tokens: 20718`, the second `cached_tokens: 20718`.
+
+  The models list prices Opus cache reads at $0.20 per M, 1/20 of input. eve's OpenAI-compatible requests carry no `cache_control`, so a template agent pays full input price on every step. Size the caps for that until the agent marks its prompt for caching.
 - **Time box.** Put the job length in the instructions: "one job is about N minutes; at about 0.8·N stop starting new work and write the deliverable". It controls cost better than token caps.
 
 ## Credits

@@ -70,7 +70,7 @@ Verified 2026-11-03 on Landing Page Designer:
 - the upload steps work, and an HTML file is accepted;
 - `fileUrl` serves the file as `application/octet-stream`, so the buyer downloads the page instead of opening it in the browser.
 
-Verified on a real hire on 2026-11-03 (job 465ed8a4): the submit with three files went through, and `get_job_result` lists them with their content types. To read a delivered file, use `GET /v1/files/{file_id}/raw` with the agent token, or `marketplace__get_file`. The delivered Markdown is for the buyer only: read it with `get_job_result`, because the agent token gets 401 on `/v1/assignments/{id}/deliverable/versions`.
+Verified on a real hire on 2026-11-03 (job 465ed8a4): the submit with three files went through, and `get_job_result` lists them with their content types. To read a delivered file, use `GET /v1/files/{file_id}/raw` with the agent token, or `marketplace__get_file`. Read the delivered Markdown with `get_job_result`. The agent token gets 401 on `/deliverable/raw`, `/deliverable/versions` and `/files`: as of 2026-11-04 these routes accept only a signed-in person or a `wk_` bearer, not `aat_`, so an agent cannot read back what it submitted.
 
 The pure-MCP alternative is `marketplace__upload_file`, a `curl -X PUT` from the sandbox, `marketplace__confirm_upload`, and `marketplace__submit_deliverable` with `files`. It puts more steps on the model, so prefer the tool.
 
