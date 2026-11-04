@@ -35,7 +35,9 @@ Kinship Research was built this way.
 
 - Install it in the sandbox image with `agent/sandbox.ts` (start from `assets/sandbox.ts`). eve runs `prepare` once at build time and snapshots the result, so every job starts with the tool installed.
   - **Pin it:** `pip install "git+https://github.com/o/r@<sha>"`, or `git clone` and then `git checkout <sha>`.
-  - **Python:** use `python3 -m pip install --user --break-system-packages …`. `python3 -m venv` fails in the local Docker image: it is Ubuntu with Python 3.14, has no `python3-venv`, and its Python is externally managed. Found in the dry run. Console scripts land in `~/.local/bin`, which is on the sandbox PATH. This is verified locally; on Vercel it has not been run yet, so check the first deploy's build log.
+  - **Python:** use `python3 -m pip install --user --break-system-packages …`. `python3 -m venv` fails in the local Docker image: it is Ubuntu with Python 3.14, has no `python3-venv`, and its Python is externally managed. Console scripts land in `~/.local/bin`, which is on the sandbox PATH.
+    - In the local image `~/.local/share` belongs to root, so a package that ships man pages (matplotlib through fonttools) fails with "Permission denied". Run this first: `mkdir -p ~/.local/share 2>/dev/null; [ -w ~/.local/share ] || sudo chown -R "$(id -u):$(id -g)" ~/.local/share`.
+    - Verified on Vercel on 2026-11-04 (Token Deep Dive): the same commands install matplotlib in `prepare` during `vercel deploy`. Pin a version range rather than an exact version, because the Python version differs between the local image and Vercel.
   - **System packages:** the systems differ. Locally the sandbox is Docker (`ghcr.io/vercel/eve`, Ubuntu, `sudo apt-get`); on Vercel it is Amazon Linux (`sudo dnf`). Prefer pip or npm packages. If you need a system package, branch on `command -v dnf`.
   - **Test `prepare` locally:** run `smoke-local.sh` with a brief that runs the tool. On Vercel, `prepare` runs during `vercel deploy`; a failure there fails the build, so read the deploy log.
 - Write a short skill, `agent/skills/<tool>/SKILL.md`. It covers the commands the job needs, the inputs, the outputs, and the common errors. The agent calls the tool through `bash`.
@@ -48,6 +50,7 @@ Kinship Research was built this way.
 ### E. MCP server
 
 - **Hosted, with an HTTPS URL.** Add `agent/connections/<name>.ts` with `defineMcpClientConnection({ url, description, auth })`. The model finds its tools with `eve__search("<name>__")`.
+- **Hosted, but its keyed endpoint wants OAuth in a browser.** The agent cannot do that flow. CoinGecko's Pro MCP server is one: it answers 401 with `www-authenticate: Bearer realm="OAuth"` and ignores the API key in a header. Use the service's plain HTTP API instead (shape F).
 - **Stdio only.** eve connections cannot start a local process. Choose one of these:
   1. use the CLI or library under the server and handle it as shape C or D;
   2. port the few tools the job needs to `agent/tools/*.ts`;
@@ -57,6 +60,11 @@ Kinship Research was built this way.
 
 - Add `agent/connections/<name>.ts` with `defineOpenAPIConnection({ spec, baseUrl?, auth })`.
 - If the API needs a key, the builder pays for its usage. Put the key in `.env.local`, push it with `push-env.sh`, and count its cost in the price.
+- **For a data API the agent analyses, write a tool instead.** Token Deep Dive (`~/Developer/token-deep-dive/agent/tools/coingecko.ts`) shows the pattern: one GET tool with the key in a header, and a `saveAs` input that writes the response into the sandbox and returns only an outline.
+  - The key stays in the function and never enters the sandbox.
+  - A year of daily prices or a 300 KB list reaches Python as a file instead of filling the model's context.
+  - Pair it with a script in the skill that computes every number and draws the charts, so the model copies numbers rather than calculating them.
+- **Check what the key's plan answers before you write the method.** Call each endpoint the job needs once with the real key. Plans hide endpoints behind 401s; list those in the skill as "do not call".
 
 ## Bad fits: tell the user before you build
 

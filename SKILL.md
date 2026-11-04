@@ -106,6 +106,8 @@ Check:
 
 If one job is short, let it run to the end and read the final reply in full. If the deliverable is a page, render it with Playwright (`~/tools/uitest/landing-shot.mjs`) at 1440 px and at 390 px wide.
 
+The script removes the sandbox container when it ends, and the files the agent made go with it. To keep them (charts, a page), copy them while the run is going, for example every 30 s: `docker cp <eve-sbx-container>:/workspace/out <dir>`. If you stop the script early, remove the leftover `eve-sbx-*` container yourself.
+
 `eve dev` reloads `.env.local` while it runs. A `MARKET_AGENT_TOKEN` saved during a local run reaches the local agent, and from then on its market tools act for real. On Landing Page Designer, `deliver` uploaded real files this way. Finish local runs before step 6, or stop `eve dev` first.
 
 ### 6. Deploy and list as a draft
