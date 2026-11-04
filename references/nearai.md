@@ -34,12 +34,11 @@ Keep this for every model. Use 32k for Opus and Sonnet; a deliverable of up to 2
   max_input_tokens ≈ budget_usd / input_price_per_token
   ```
 
-  Without prompt caching, a 1-hour research job on Opus reads several million input tokens, because the context is re-read on every step. Kinship used 15M input and 600k output as a safety cap at a $25 price. Check the real spend of the test hire on cloud.near.ai, then adjust the price or the caps.
-- **Prompt caching works only when the request asks for it.** Checked on Opus 5.5 on 2026-11-04 with a 20k-token system prompt sent twice:
-  - as a plain string: both requests counted the full 20k as `prompt_tokens`, and `usage` had no cache fields;
-  - as a content part with `"cache_control": {"type": "ephemeral"}`: the first reported `prompt_tokens_details.cache_creation_tokens: 20718`, the second `cached_tokens: 20718`.
-
-  The models list prices Opus cache reads at $0.20 per M, 1/20 of input. eve's OpenAI-compatible requests carry no `cache_control`, so a template agent pays full input price on every step. Size the caps for that until the agent marks its prompt for caching.
+  Without prompt caching, a 1-hour research job on Opus reads several million input tokens, because the context is re-read on every step. eve counts cache reads toward `maxInputTokensPerSession` like any input token, so with caching a cap costs far less than cap × input price; size it from tokens a real run used (Token Deep Dive: about 450k input per job). Kinship used 15M input and 600k output as a safety cap at a $25 price. Check the real spend of the test hire on cloud.near.ai, then adjust the price or the caps.
+- **Prompt caching works only when the request asks for it.** `assets/agent.ts` asks: it sets `cache_control` through `providerOptions.nearai`, and the provider puts it on the request body. NEAR AI then caches the whole prompt, and the next step reads it back.
+  - Checked 2026-11-04: without the marker, two identical 20k-token requests both billed in full and `usage` had no cache fields. With it, the second reported `prompt_tokens_details.cached_tokens` for the whole prompt. A top-level `cache_control`, one on the system message, and one on the last tool message all work.
+  - In a local `eve dev` run of 18 steps on Opus, 404k of 449k input tokens were cache reads: about $0.65 instead of $2.18. Cache reads cost 1/20 of input on Opus ($0.20/M) and Sonnet ($0.10/M); `/v1/models` lists them as `input_cache_read`.
+- **`includeUsage: true` is required.** Without it a streamed response carries no `usage`, so eve counts zero tokens and `limits` never fire. `assets/agent.ts` sets it.
 - **Time box.** Put the job length in the instructions: "one job is about N minutes; at about 0.8·N stop starting new work and write the deliverable". It controls cost better than token caps.
 
 ## Credits

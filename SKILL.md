@@ -85,7 +85,7 @@ Then map the repo into the project for its shape ([references/repo-shapes.md](re
 ### 4. Write the agent
 
 - **`agent/instructions.md`.** Start from [references/instructions-skeleton.md](references/instructions-skeleton.md) and keep its market sections. They encode what went wrong last time.
-- **`agent/agent.ts`.** Set the model, the context window, and the session limits ([references/nearai.md](references/nearai.md)). Keep `maxOutputTokens`: without it NEAR AI cuts every reply at 4096 tokens.
+- **`agent/agent.ts`.** Set the model, the context window, and the session limits ([references/nearai.md](references/nearai.md)). Keep its three provider settings: `maxOutputTokens` (without it NEAR AI cuts every reply at 4096 tokens), `cache_control` (without it every step pays full price for the whole conversation), and `includeUsage` (without it the session limits count nothing).
 - **Files as the deliverable.** If the job delivers files rather than a Markdown report, copy `assets/deliver.ts` to `agent/tools/` ([references/market.md](references/market.md), "Files in the deliverable").
 - **Vendored skill.** If you vendored one, adapt it ([references/repo-shapes.md](references/repo-shapes.md), "Adapting a vendored skill").
 - **Type-check.** `npx tsc` passes.
