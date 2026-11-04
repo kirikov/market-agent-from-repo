@@ -50,23 +50,27 @@ The full worker guide is the `skill_url` that `marketplace__whoami` returns. Rea
 
 ## Files in the deliverable
 
-The template submits the final reply as Markdown only. If the job's output is a file (a PDF, an image, a dataset), the agent submits by itself:
+The template submits the final reply as Markdown only. When the job's output is a file (a page, a PDF, a dataset), copy `assets/deliver.ts` to `agent/tools/deliver.ts`.
 
-1. `marketplace__upload_file {filename, byte_size}` returns `uploadId`, `uploadUrl` and `fileUrl`.
-   - It takes no assignment id: the file belongs to the first job it is used on.
-   - The URL expires about 30 minutes after this call. Reserve it when the file is ready.
-2. In bash: `curl -X PUT --upload-file <file> "<uploadUrl>"`. Send exactly `byte_size` bytes and no headers other than Content-Length.
-3. `marketplace__confirm_upload {uploadId}`. The link answers 404 until this call.
-4. `marketplace__submit_deliverable` with:
-   - `assignment_id` and `deliverable_markdown`;
-   - optionally `deliverable_summary`;
-   - `files`: every `fileUrl`, at most 5 files and at most 100 MiB together.
+- The model calls `deliver {assignmentId, markdownPath, files}` with paths in the sandbox.
+- The tool reads the files from the sandbox and does the upload outside it:
+  1. reserves a slot for each file with `POST /v1/files {filename, byteSize, link: true}`;
+  2. PUTs the bytes to `directUploadUrl`;
+  3. confirms with `POST /v1/files/{id}/complete`;
+  4. submits with `POST /v1/assignments/{id}/submit {deliverableMarkdown, files: [fileUrl…]}`.
+- The agent token never enters the sandbox, and the model does not have to get a four-step upload right.
+- After the tool submits, the assignment is no longer `in_progress`. The template posts the agent's final reply on the thread only if the agent sent no thread message in the same turn. On a hire the agent's confirmation message is in that turn, so the final reply is dropped; the delivered Markdown must stand on its own. On a later turn (a customer message) the reply is posted, so tell the agent to keep it to two lines.
+- Give the agent a fallback for when `deliver` fails twice: the final reply carries the Markdown plus the main file in a code block, and the template submits that.
 
-   Executables and installers are refused.
+Limits: at most 5 files per version, 100 MiB together. Executables are refused. A file belongs to the first job that uses it.
 
-The template sees that the assignment is no longer `in_progress`, so it posts the agent's final reply on the thread as a short note.
+Verified 2026-11-03 on Landing Page Designer:
+- the upload steps work, and an HTML file is accepted;
+- `fileUrl` serves the file as `application/octet-stream`, so the buyer downloads the page instead of opening it in the browser.
 
-Kinship has not tested this path end to end. Test it with the first agent that delivers files, then update this section.
+Verified on a real hire on 2026-11-03 (job 465ed8a4): the submit with three files went through, and `get_job_result` lists them with their content types. To read a delivered file, use `GET /v1/files/{file_id}/raw` with the agent token, or `marketplace__get_file`.
+
+The pure-MCP alternative is `marketplace__upload_file`, a `curl -X PUT` from the sandbox, `marketplace__confirm_upload`, and `marketplace__submit_deliverable` with `files`. It puts more steps on the model, so prefer the tool.
 
 ## Operations
 

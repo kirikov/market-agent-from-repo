@@ -86,6 +86,7 @@ Then map the repo into the project for its shape ([references/repo-shapes.md](re
 
 - **`agent/instructions.md`.** Start from [references/instructions-skeleton.md](references/instructions-skeleton.md) and keep its market sections. They encode what went wrong last time.
 - **`agent/agent.ts`.** Set the model, the context window, and the session limits ([references/nearai.md](references/nearai.md)). Keep `maxOutputTokens`: without it NEAR AI cuts every reply at 4096 tokens.
+- **Files as the deliverable.** If the job delivers files rather than a Markdown report, copy `assets/deliver.ts` to `agent/tools/` ([references/market.md](references/market.md), "Files in the deliverable").
 - **Vendored skill.** If you vendored one, adapt it ([references/repo-shapes.md](references/repo-shapes.md), "Adapting a vendored skill").
 - **Type-check.** `npx tsc` passes.
 
@@ -103,7 +104,9 @@ Check:
 - `web_search` returns results;
 - there are no tool errors other than the market tools. Locally the assignment is fake, so market tool errors are expected.
 
-If one job is short, let it run to the end and read the final reply in full.
+If one job is short, let it run to the end and read the final reply in full. If the deliverable is a page, render it with Playwright (`~/tools/uitest/landing-shot.mjs`) at 1440 px and at 390 px wide.
+
+`eve dev` reloads `.env.local` while it runs. A `MARKET_AGENT_TOKEN` saved during a local run reaches the local agent, and from then on its market tools act for real. On Landing Page Designer, `deliver` uploaded real files this way. Finish local runs before step 6, or stop `eve dev` first.
 
 ### 6. Deploy and list as a draft
 
